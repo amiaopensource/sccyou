@@ -1,0 +1,175 @@
+#!/bin/bash
+
+SEARCH_FIRST_X_SECONDS_FOR_CAPTION_LINE=20
+
+FFMPEG_INPUT_OPTIONS+=(-hide_banner)
+FFPROBE_INPUT_OPTIONS+=(-hide_banner)
+
+_usage(){
+cat <<EOF
+$(basename "${0}")
+
+  Usage
+   $(basename "${0}") [OPTIONS] MOVIE_FILE_1.mov [ MOVIE_FILE_2.mov ... ]
+
+  Options
+   -h  display this help
+   -s  make an srt output as well as scc
+   -y  overwrite any existing output files
+
+  Outcome
+   will create MOVIE_FILE.scc and MOVIE_FILE.srt
+
+  Information about the scc format is available at http://www.theneitherworld.com/mcpoodle/SCC_TOOLS/DOCS/
+
+  Dependencies: ffmpeg
+
+  How tos:
+
+   Playback movie with the scc file
+    ffplay MOVIE_FILE.mov -vf subtitles=MOVIE_FILE.scc
+
+EOF
+}
+
+_report(){
+    local RED="$(tput setaf 1)"   # Red      - For Warnings
+    local GREEN="$(tput setaf 2)" # Green    - For Declarations
+    local BLUE="$(tput setaf 4)"  # Blue     - For Questions
+    local NC="$(tput sgr0)"       # No Color
+    local COLOR=""
+    local STARTMESSAGE=""
+    local ENDMESSAGE=""
+    local ECHOOPT=""
+    local LOG_MESSAGE=""
+    OPTIND=1
+    while getopts ":qdwstn" OPT; do
+        case "${OPT}" in
+            q) COLOR="${BLUE}" ;;                         # question mode, use color blue
+            d) COLOR="${GREEN}" ;;                        # declaration mode, use color green
+            w) COLOR="${RED}" ; LOG_MESSAGE="Y" ;;        # warning mode, use color red
+            s) STARTMESSAGE+=([$(basename "${0}")] ) ;;   # prepend scriptname to the message
+            t) STARTMESSAGE+=($(_get_iso8601) '- ' ) ;;   # prepend timestamp to the message
+            n) ECHOOPT="-n" ;;                            # to avoid line breaks after echo
+        esac
+    done
+    shift $(( ${OPTIND} - 1 ))
+    MESSAGE="${1}"
+    echo "${ECHOOPT}" "${COLOR}${STARTMESSAGE[@]}${MESSAGE}${NC}"
+    [ "${LOG_MESSAGE}" = "Y" ]
+}
+
+_seconds_to_hhmmss(){
+    num="$1"
+    h=`echo "$num" | awk '{printf "%02d", $1 / 3600}'`
+    m=`echo "$num" | awk '{printf "%02d", $1 % 3600 / 60}'`
+    s=`echo "$num" | awk '{printf "%02d", $1 % 60}'`
+    f=`echo "$num" | awk '{printf "%02d", ($1 % 1) * 30}'`
+    echo "$h:$m:$s:$f"
+}
+
+_get_line(){
+    LINE="$(ffmpeg -i "${MOVIE}" -vf "readeia608=spw=${SPW},metadata=mode=print:key=lavfi.readeia608.0.line" -t "${SEARCH_FIRST_X_SECONDS_FOR_CAPTION_LINE}" -f null - 2>&1 | grep -o "lavfi.readeia608.0.line=[0-9]*" | cut -d= -f2 | sort | uniq -c | sort -n -r | head -n 1 | awk '{print $2}')"
+}
+
+_get_caption_settings(){
+    # test ratio of width reserved for sync code detection at both 0.3 and 0.27
+    SPW="0.30"
+    _get_line "${MOVIE}"
+    if [[ -z "${LINE}" ]] ; then
+        SPW="0.27"
+        _get_line "${MOVIE}"
+    fi
+    if [[ -z "${LINE}" ]] ; then
+        _report -w "Sadly no caption data is detected in the first ${SEARCH_FIRST_X_SECONDS_FOR_CAPTION_LINE} seconds of ${MOVIE}."
+        break
+    else
+        _report -d "Found captions in ${MOVIE}, using spw=${SPW} and line ${LINE}."
+    fi
+}
+
+_write_cc(){
+    CC="$1"
+    if [[ "$START" == "Y" ]] ; then
+        echo -n "	${CC}" >> "${SCC_OUT}"
+    else
+        echo -n " ${CC}" >> "${SCC_OUT}"
+    fi
+    START="N"
+}
+
+_write_new_cc_line(){
+    SCC_TIME="$(_seconds_to_hhmmss "${SECS}")"
+    echo >> "${SCC_OUT}"
+    echo >> "${SCC_OUT}"
+    echo -n "${SCC_TIME}" >> "${SCC_OUT}"
+    START="Y"
+}
+
+_start_scc(){
+    echo -n "Scenarist_SCC V1.0" > "${SCC_OUT}"
+}
+
+_end_scc(){
+    echo >> "${SCC_OUT}"
+}
+
+while getopts ":hsy" OPT ; do
+    case "${OPT}" in
+        h) _usage ;;
+        s) SRT_OUTPUT="y" ;;
+        y) FFMPEG_INPUT_OPTIONS+=(-y) ; OVERWRITE="sure" ;;
+        *) echo "bad option -${OPTARG}" ; _usage ;;
+    esac
+done
+shift $(( ${OPTIND} - 1 ))
+
+if [[ "${@}" == "" ]] ; then
+    _usage
+    exit
+fi
+
+while [[ "${@}" != "" ]] ; do
+    MOVIE="${1}"
+    shift
+    SCC_OUT="${MOVIE%.*}.scc"
+    SRT_OUT="${MOVIE%.*}.srt"
+
+    if [[ "${OVERWRITE}" != "sure" ]] ; then
+        if [[ -f "${SCC_OUT}" ]] ; then
+            _report -w "${SCC_OUT} already exists"
+            break
+        fi
+        if [[ -f "${SRT_OUT}" ]] && [[ "${SRT_OUTPUT}"  == "y" ]] ; then
+            _report -w "${SRT_OUT} already exists"
+            break
+        fi
+    fi
+
+    _get_caption_settings "${MOVIE}"E
+    _start_scc
+    PREV_CC="8080"
+    ffprobe "${FFPROBE_INPUT_OPTIONS[@]}" -f lavfi -i movie="${MOVIE},readeia608=spw=${SPW}:scan_min=${LINE}:scan_max=${LINE}" -show_entries frame=pkt_pts_time:frame_tags=lavfi.readeia608.0.cc -of csv | while read line ; do
+        SECS="$(echo "${line}" | cut -d"," -f2)"
+        CC="$(echo "${line}" | cut -d"," -f3 | sed 's/0x//g;s/ //g')"
+        if [[ "${CC}" != "8080" ]] && [[ "${PREV_CC}" == "8080" ]] ; then
+            _write_new_cc_line
+            _write_cc "$CC"
+        elif [[ "${CC}" == "9420" ]] && [[ "${PREV_CC}" != "9420" ]] ; then
+            _write_new_cc_line
+            _write_cc "$CC"
+        elif [[ "${CC}" != "8080" ]] ; then
+            _write_cc "$CC"
+        fi
+        PREV_CC="$CC"
+    done
+    _end_scc
+    if [[ "${SRT_OUTPUT}"  == "y" ]] ; then
+        ffmpeg "${FFMPEG_INPUT_OPTIONS[@]}" -i "${SCC_OUT}" "${SRT_OUT}"
+    fi
+
+    _report -d "Done with ${MOVIE}. Preview with:"
+    _report -q "    ffplay \"${MOVIE}\" -vf subtitles=\"${SCC_OUT}\""
+    _report -d "Or to zoom in on the captions try:"
+    _report -q "    ffplay \"${MOVIE}\" -vf crop=iw:1:0:${LINE},scale=iw:4:flags=neighbor,tile=layout=1x120:overlap=119:init_padding=119,setdar=4/3,subtitles=\"${SCC_OUT}\""
+done
