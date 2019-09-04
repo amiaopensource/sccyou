@@ -1,4 +1,8 @@
 #!/bin/bash
+# sccyou
+# script to apply the readeia608 filter and interpret the results in order to create an scc (and optionally an srt) output from standard definition video files which contain EIA 608 data
+# thanks to Paul Mahol, Ben Turkus
+# Copyright (c) 2019, Dave Rice, see License.txt
 
 SEARCH_FIRST_X_SECONDS_FOR_CAPTION_LINE=20
 
