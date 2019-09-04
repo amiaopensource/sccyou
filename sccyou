@@ -175,5 +175,5 @@ while [[ "${@}" != "" ]] ; do
     _report -d "Done with ${MOVIE}. Preview with:"
     _report -q "    ffplay \"${MOVIE}\" -vf subtitles=\"${SCC_OUT}\""
     _report -d "Or to zoom in on the captions try:"
-    _report -q "    ffplay \"${MOVIE}\" -vf crop=iw:1:0:${LINE},scale=iw:4:flags=neighbor,tile=layout=1x120:overlap=119:init_padding=119,setdar=4/3,subtitles=\"${SCC_OUT}\""
+    _report -q "    ffplay \"${MOVIE}\" -vf format=rgb24,crop=iw:1:0:${LINE},scale=iw:4:flags=neighbor,tile=layout=1x120:overlap=119:init_padding=119,setdar=4/3,subtitles=\"${SCC_OUT}\""
 done
