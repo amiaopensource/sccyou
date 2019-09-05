@@ -25,11 +25,17 @@ Standard playback, with the captioned text on screen:
 ffplay "INPUT_FILE" -vf subtitles="INPUT_FILE.scc"
 ```
 
+![Alt text](./playback_standardcaptions.png "Standard Playback w/ ffplay")
+
+
 Zoomed-in playback of caption data, scrolling vertically, with the captioned text appearing on screen:
 
 ```
 ffplay "INPUT_FILE" -vf format=rgb24,crop=iw:1:0:1,scale=iw:4:flags=neighbor,tile=layout=1x120:overlap=119:init_padding=119,setdar=4/3,subtitles="INPUT_FILE.scc"
 ```
+
+![Alt text](./playback_zoomedin.png "Zoomed in Playback w/ ffplay")
+
 
 ## Tell me more about closed captions
 
