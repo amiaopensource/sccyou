@@ -152,6 +152,12 @@ while [[ "${@}" != "" ]] ; do
 
     _get_caption_settings "${MOVIE}"
     _start_scc
+
+    _report -d "Working on ${MOVIE}, preview with:"
+    _report -q "    ffplay \"${MOVIE}\" -vf subtitles=\"${SCC_OUT}\""
+    _report -d "Or to zoom in on the captions try:"
+    _report -q "    ffplay \"${MOVIE}\" -vf format=rgb24,crop=iw:1:0:${LINE},scale=iw:4:flags=neighbor,tile=layout=1x120:overlap=119:init_padding=119,setdar=4/3,subtitles=\"${SCC_OUT}\""
+
     PREV_CC="8080"
     ffprobe "${FFPROBE_INPUT_OPTIONS[@]}" -f lavfi -i movie="${MOVIE},readeia608=lp=1:spw=${SPW}:scan_min=${LINE}:scan_max=${LINE}" -show_entries frame=pkt_pts_time:frame_tags=lavfi.readeia608.0.cc -of csv | while read line ; do
         SECS="$(echo "${line}" | cut -d"," -f2)"
@@ -172,8 +178,5 @@ while [[ "${@}" != "" ]] ; do
         ffmpeg "${FFMPEG_INPUT_OPTIONS[@]}" -i "${SCC_OUT}" "${SRT_OUT}"
     fi
 
-    _report -d "Done with ${MOVIE}. Preview with:"
-    _report -q "    ffplay \"${MOVIE}\" -vf subtitles=\"${SCC_OUT}\""
-    _report -d "Or to zoom in on the captions try:"
-    _report -q "    ffplay \"${MOVIE}\" -vf format=rgb24,crop=iw:1:0:${LINE},scale=iw:4:flags=neighbor,tile=layout=1x120:overlap=119:init_padding=119,setdar=4/3,subtitles=\"${SCC_OUT}\""
+    _report -d "Done with ${MOVIE}."
 done
