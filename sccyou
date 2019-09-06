@@ -73,7 +73,7 @@ _seconds_to_hhmmss(){
 }
 
 _get_line(){
-    LINE="$(ffmpeg -i "${MOVIE}" -vf "readeia608=spw=${SPW},metadata=mode=print:key=lavfi.readeia608.0.line" -t "${SEARCH_FIRST_X_SECONDS_FOR_CAPTION_LINE}" -f null - 2>&1 | grep -o "lavfi.readeia608.0.line=[0-9]*" | cut -d= -f2 | sort | uniq -c | sort -n -r | head -n 1 | awk '{print $2}')"
+    LINE="$(ffmpeg -i "${MOVIE}" -vf "readeia608=lp=1:spw=${SPW},metadata=mode=print:key=lavfi.readeia608.0.line" -t "${SEARCH_FIRST_X_SECONDS_FOR_CAPTION_LINE}" -f null - 2>&1 | grep -o "lavfi.readeia608.0.line=[0-9]*" | cut -d= -f2 | sort | uniq -c | sort -n -r | head -n 1 | awk '{print $2}')"
 }
 
 _get_caption_settings(){
