@@ -47,7 +47,7 @@ More information about the scc format (hexadecimal character codes and sets) can
 
 
 ## Feedback and Issues
-We welcome any feedback, in the [Issues](https://github.com/amiaopensource/sccyou/issues) section of this repo, though keep in mind that EIA-608 captions were often improperly created/duplicated, and ffmpeg can only retreive that which isn't total trash.
+We welcome any feedback, in the [Issues](https://github.com/amiaopensource/sccyou/issues) section of this repo, though keep in mind that EIA-608 captions were often improperly created/duplicated, and ffmpeg can only retrieve that which isn't total trash.
 
 
 ## Code Contributors
