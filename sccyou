@@ -120,10 +120,10 @@ _end_scc(){
 
 while getopts ":hsy" OPT ; do
     case "${OPT}" in
-        h) _usage ;;
+        h) _usage ; exit 0 ;;
         s) SRT_OUTPUT="y" ;;
         y) FFMPEG_INPUT_OPTIONS+=(-y) ; OVERWRITE="sure" ;;
-        *) echo "bad option -${OPTARG}" ; _usage ;;
+        *) echo "bad option -${OPTARG}" ; _usage ; exit 1 ;;
     esac
 done
 shift $(( ${OPTIND} - 1 ))
