@@ -61,7 +61,7 @@ Development of sccyou was provided by New York Public Library's 2018/19 Innovati
 
 ## Code of Conduct
 
-You can read our contributor code of conduct here.
+You can read our contributor code of conduct [here](https://www.contributor-covenant.org/version/2/0/code_of_conduct/).
 
 ## License
 
