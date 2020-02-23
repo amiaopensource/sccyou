@@ -7,13 +7,13 @@ ffmpeg 4.3 or later
 
 ## Usage
 
-To use sccyou, simply download the script from the repo, make it executable (`chmod 755 sccyou.sh`), and run one of the following commands:
+To use sccyou, simply download the script from the repo, make it executable (`chmod 755 sccyou`), and run one of the following commands:
 
 ```
-  ./sccyou.sh -h               display the help menu
-  ./sccyou.sh INPUT_FILE       create an scc output
-  ./sccyou.sh -s  INPUT_FILE   create both scc and srt outputs
-  ./sccyou.sh -y  INPUT_FILE   overwrite any existing outputs
+  ./sccyou -h               display the help menu
+  ./sccyou INPUT_FILE       create an scc output
+  ./sccyou -s  INPUT_FILE   create both scc and srt outputs
+  ./sccyou -y  INPUT_FILE   overwrite any existing outputs
 ```
 The results of sccyou will vary based upon your specific command, but will look like sidecar `INPUT_FILE.scc` and `INPUT_FILE.srt` files.
 
