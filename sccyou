@@ -36,6 +36,10 @@ $(basename "${0}")
 EOF
 }
 
+_get_iso8601(){
+    date +%FT%T
+}
+
 _report(){
     local RED="$(tput setaf 1)"   # Red      - For Warnings
     local GREEN="$(tput setaf 2)" # Green    - For Declarations
@@ -43,7 +47,6 @@ _report(){
     local NC="$(tput sgr0)"       # No Color
     local COLOR=""
     local STARTMESSAGE=""
-    local ENDMESSAGE=""
     local ECHOOPT=""
     local LOG_MESSAGE=""
     OPTIND=1
