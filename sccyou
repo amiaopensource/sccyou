@@ -63,13 +63,9 @@ _report(){
     [ "${LOG_MESSAGE}" = "Y" ]
 }
 
-_seconds_to_hhmmss(){
-    num="$1"
-    h=`echo "$num" | awk '{printf "%02d", $1 / 3600}'`
-    m=`echo "$num" | awk '{printf "%02d", $1 % 3600 / 60}'`
-    s=`echo "$num" | awk '{printf "%02d", $1 % 60}'`
-    f=`echo "$num" | awk '{printf "%02d", ($1 % 1) * 30}'`
-    echo "$h:$m:$s:$f"
+_hhmmssmmm_to_hhmmssff(){
+    tc="$1"
+    echo "$tc" | awk -F "[:.]" '{ printf "%02i:%02i:%02i:%02i\n", $1, $2, $3, substr($4,1,3)*(30/1000) }'
 }
 
 _get_line(){
@@ -103,7 +99,7 @@ _write_cc(){
 }
 
 _write_new_cc_line(){
-    SCC_TIME="$(_seconds_to_hhmmss "${SECS}")"
+    SCC_TIME="$(_hhmmssmmm_to_hhmmssff "${SECS}")"
     echo >> "${SCC_OUT}"
     echo >> "${SCC_OUT}"
     echo -n "${SCC_TIME}" >> "${SCC_OUT}"
@@ -171,7 +167,7 @@ while [[ "${@}" != "" ]] ; do
             _write_cc "$CC"
         fi
         PREV_CC="$CC"
-    done < <(ffprobe "${FFPROBE_INPUT_OPTIONS[@]}" -f lavfi -i movie="${MOVIE},readeia608=lp=1:spw=${SPW}:scan_min=${LINE}:scan_max=${LINE}" -show_entries frame=pkt_pts_time:frame_tags=lavfi.readeia608.0.cc -of csv)
+    done < <(ffprobe "${FFPROBE_INPUT_OPTIONS[@]}" -sexagesimal -f lavfi -i movie="${MOVIE},readeia608=lp=1:spw=${SPW}:scan_min=${LINE_MIN}:scan_max=${LINE_MAX}" -show_entries frame=pkt_pts_time:frame_tags=lavfi.readeia608.0.cc -of csv)
     _end_scc
     if [[ "${SRT_OUTPUT}"  == "y" ]] ; then
         ffmpeg "${FFMPEG_INPUT_OPTIONS[@]}" -i "${SCC_OUT}" "${SRT_OUT}"
