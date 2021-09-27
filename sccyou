@@ -17,9 +17,11 @@ $(basename "${0}")
    $(basename "${0}") [OPTIONS] MOVIE_FILE_1.mov [ MOVIE_FILE_2.mov ... ]
 
   Options
-   -h  display this help
-   -s  make an srt output as well as scc
-   -y  overwrite any existing output files
+   -h           display this help
+   -o <dir>     write output files to the provided directory (default is next
+                to the input file)
+   -s           make an srt output as well as scc
+   -y           overwrite any existing output files
 
   Outcome
    will create MOVIE_FILE.scc and MOVIE_FILE.srt
@@ -34,6 +36,21 @@ $(basename "${0}")
     ffplay MOVIE_FILE.mov -vf subtitles=MOVIE_FILE.scc
 
 EOF
+}
+
+_mkdir2(){
+    local DIR2MAKE=""
+    while [ "${*}" != "" ] ; do
+        DIR2MAKE="${1}"
+        if [ ! -d "${DIR2MAKE}" ] ; then
+            mkdir -p "${DIR2MAKE}"
+            if [ "${?}" -ne 0 ]; then
+                _report -wt "${0}: Can't create directory at ${DIR2MAKE}"
+                exit 1
+            fi
+        fi
+        shift
+    done
 }
 
 _report(){
@@ -118,11 +135,12 @@ _end_scc(){
     echo >> "${SCC_OUT}"
 }
 
-while getopts ":hsy" OPT ; do
+while getopts ":hsyo:" OPT ; do
     case "${OPT}" in
         h) _usage ; exit 0 ;;
         s) SRT_OUTPUT="y" ;;
         y) FFMPEG_INPUT_OPTIONS+=(-y) ; OVERWRITE="sure" ;;
+        o) OUTPUT_DIR="${OPTARG}" ;;
         *) echo "bad option -${OPTARG}" ; _usage ; exit 1 ;;
     esac
 done
@@ -135,9 +153,18 @@ fi
 
 while [[ "${@}" != "" ]] ; do
     MOVIE="${1}"
+    if [[ -n "${OUTPUT_DIR}" ]] ; then
+        MOVIE_BN="$(basename "${MOVIE}")"
+        SCC_OUT="${OUTPUT_DIR}/${MOVIE_BN%.*}.scc"
+        SRT_OUT="${OUTPUT_DIR}/${MOVIE_BN%.*}.srt"
+        if [[ ! -d "${OUTPUT_DIR}" ]] ; then
+            _mkdir2 "${OUTPUT_DIR}"
+        fi
+    else
+        SCC_OUT="${MOVIE%.*}.scc"
+        SRT_OUT="${MOVIE%.*}.srt"
+    fi
     shift
-    SCC_OUT="${MOVIE%.*}.scc"
-    SRT_OUT="${MOVIE%.*}.srt"
 
     if [[ "${OVERWRITE}" != "sure" ]] ; then
         if [[ -f "${SCC_OUT}" ]] ; then
