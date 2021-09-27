@@ -63,32 +63,29 @@ _report(){
     [ "${LOG_MESSAGE}" = "Y" ]
 }
 
-_seconds_to_hhmmss(){
-    num="$1"
-    h=`echo "$num" | awk '{printf "%02d", $1 / 3600}'`
-    m=`echo "$num" | awk '{printf "%02d", $1 % 3600 / 60}'`
-    s=`echo "$num" | awk '{printf "%02d", $1 % 60}'`
-    f=`echo "$num" | awk '{printf "%02d", ($1 % 1) * 30}'`
-    echo "$h:$m:$s:$f"
+_hhmmssmmm_to_hhmmssff(){
+    tc="$1"
+    echo "$tc" | awk -F "[:.]" '{ printf "%02i:%02i:%02i:%02i\n", $1, $2, $3, substr($4,1,3)*(30/1000) }'
 }
 
 _get_line(){
-    LINE="$(ffmpeg -i "${MOVIE}" -vf "readeia608=lp=1:spw=${SPW},metadata=mode=print:key=lavfi.readeia608.0.line" -t "${SEARCH_FIRST_X_SECONDS_FOR_CAPTION_LINE}" -f null - 2>&1 | grep -o "lavfi.readeia608.0.line=[0-9]*" | cut -d= -f2 | sort | uniq -c | sort -n -r | head -n 1 | awk '{print $2}')"
+    LINE_MIN="$(ffmpeg -i "${MOVIE}" -vf "readeia608=lp=1:spw=${SPW},metadata=mode=print:key=lavfi.readeia608.0.line" -t "${SEARCH_FIRST_X_SECONDS_FOR_CAPTION_LINE}" -f null - 2>&1 | grep -o "lavfi.readeia608.0.line=[0-9]*" | cut -d= -f2 | sort | uniq -c | sort -n -r | head -n 1 | awk '{print $2}')"
+    LINE_MAX="$((LINE_MIN + 1))"
 }
 
 _get_caption_settings(){
     # test ratio of width reserved for sync code detection at both 0.3 and 0.27
     SPW="0.30"
     _get_line "${MOVIE}"
-    if [[ -z "${LINE}" ]] ; then
+    if [[ -z "${LINE_MIN}" ]] ; then
         SPW="0.27"
         _get_line "${MOVIE}"
     fi
-    if [[ -z "${LINE}" ]] ; then
+    if [[ -z "${LINE_MIN}" ]] ; then
         _report -w "Sadly no caption data is detected in the first ${SEARCH_FIRST_X_SECONDS_FOR_CAPTION_LINE} seconds of ${MOVIE}."
         break
     else
-        _report -d "Found captions in ${MOVIE}, using spw=${SPW} and line ${LINE}."
+        _report -d "Found captions in ${MOVIE}, using spw=${SPW} and line ${LINE_MIN}."
     fi
 }
 
@@ -103,7 +100,7 @@ _write_cc(){
 }
 
 _write_new_cc_line(){
-    SCC_TIME="$(_seconds_to_hhmmss "${SECS}")"
+    SCC_TIME="$(_hhmmssmmm_to_hhmmssff "${SECS}")"
     echo >> "${SCC_OUT}"
     echo >> "${SCC_OUT}"
     echo -n "${SCC_TIME}" >> "${SCC_OUT}"
@@ -156,12 +153,11 @@ while [[ "${@}" != "" ]] ; do
     _report -d "Working on ${MOVIE}, preview with:"
     _report -q "    ffplay \"${MOVIE}\" -vf subtitles=\"${SCC_OUT}\""
     _report -d "Or to zoom in on the captions try:"
-    _report -q "    ffplay \"${MOVIE}\" -vf format=rgb24,crop=iw:1:0:${LINE},scale=iw:4:flags=neighbor,tile=layout=1x120:overlap=119:init_padding=119,setdar=4/3,subtitles=\"${SCC_OUT}\""
+    _report -q "    ffplay \"${MOVIE}\" -vf format=rgb24,crop=iw:1:0:${LINE_MIN},scale=iw:4:flags=neighbor,tile=layout=1x120:overlap=119:init_padding=119,setdar=4/3,subtitles=\"${SCC_OUT}\""
 
     PREV_CC="8080"
-    ffprobe "${FFPROBE_INPUT_OPTIONS[@]}" -f lavfi -i movie="${MOVIE},readeia608=lp=1:spw=${SPW}:scan_min=${LINE}:scan_max=${LINE}" -show_entries frame=pkt_pts_time:frame_tags=lavfi.readeia608.0.cc -of csv | while read line ; do
-        SECS="$(echo "${line}" | cut -d"," -f2)"
-        CC="$(echo "${line}" | cut -d"," -f3 | sed 's/0x//g;s/ //g')"
+    while IFS="," read FRAME SECS CC_HEX ; do
+        CC="${CC_HEX:2:4}"
         if [[ "${CC}" != "8080" ]] && [[ "${PREV_CC}" == "8080" ]] ; then
             _write_new_cc_line
             _write_cc "$CC"
@@ -172,7 +168,7 @@ while [[ "${@}" != "" ]] ; do
             _write_cc "$CC"
         fi
         PREV_CC="$CC"
-    done
+    done < <(ffprobe "${FFPROBE_INPUT_OPTIONS[@]}" -sexagesimal -f lavfi -i movie="${MOVIE},readeia608=lp=1:spw=${SPW}:scan_min=${LINE_MIN}:scan_max=${LINE_MAX}" -show_entries frame=pkt_pts_time:frame_tags=lavfi.readeia608.0.cc -of csv)
     _end_scc
     if [[ "${SRT_OUTPUT}"  == "y" ]] ; then
         ffmpeg "${FFMPEG_INPUT_OPTIONS[@]}" -i "${SCC_OUT}" "${SRT_OUT}"
