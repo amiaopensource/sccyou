@@ -69,22 +69,23 @@ _hhmmssmmm_to_hhmmssff(){
 }
 
 _get_line(){
-    LINE="$(ffmpeg -i "${MOVIE}" -vf "readeia608=lp=1:spw=${SPW},metadata=mode=print:key=lavfi.readeia608.0.line" -t "${SEARCH_FIRST_X_SECONDS_FOR_CAPTION_LINE}" -f null - 2>&1 | grep -o "lavfi.readeia608.0.line=[0-9]*" | cut -d= -f2 | sort | uniq -c | sort -n -r | head -n 1 | awk '{print $2}')"
+    LINE_MIN="$(ffmpeg -i "${MOVIE}" -vf "readeia608=lp=1:spw=${SPW},metadata=mode=print:key=lavfi.readeia608.0.line" -t "${SEARCH_FIRST_X_SECONDS_FOR_CAPTION_LINE}" -f null - 2>&1 | grep -o "lavfi.readeia608.0.line=[0-9]*" | cut -d= -f2 | sort | uniq -c | sort -n -r | head -n 1 | awk '{print $2}')"
+    LINE_MAX="$((LINE_MIN + 1))"
 }
 
 _get_caption_settings(){
     # test ratio of width reserved for sync code detection at both 0.3 and 0.27
     SPW="0.30"
     _get_line "${MOVIE}"
-    if [[ -z "${LINE}" ]] ; then
+    if [[ -z "${LINE_MIN}" ]] ; then
         SPW="0.27"
         _get_line "${MOVIE}"
     fi
-    if [[ -z "${LINE}" ]] ; then
+    if [[ -z "${LINE_MIN}" ]] ; then
         _report -w "Sadly no caption data is detected in the first ${SEARCH_FIRST_X_SECONDS_FOR_CAPTION_LINE} seconds of ${MOVIE}."
         break
     else
-        _report -d "Found captions in ${MOVIE}, using spw=${SPW} and line ${LINE}."
+        _report -d "Found captions in ${MOVIE}, using spw=${SPW} and line ${LINE_MIN}."
     fi
 }
 
@@ -152,7 +153,7 @@ while [[ "${@}" != "" ]] ; do
     _report -d "Working on ${MOVIE}, preview with:"
     _report -q "    ffplay \"${MOVIE}\" -vf subtitles=\"${SCC_OUT}\""
     _report -d "Or to zoom in on the captions try:"
-    _report -q "    ffplay \"${MOVIE}\" -vf format=rgb24,crop=iw:1:0:${LINE},scale=iw:4:flags=neighbor,tile=layout=1x120:overlap=119:init_padding=119,setdar=4/3,subtitles=\"${SCC_OUT}\""
+    _report -q "    ffplay \"${MOVIE}\" -vf format=rgb24,crop=iw:1:0:${LINE_MIN},scale=iw:4:flags=neighbor,tile=layout=1x120:overlap=119:init_padding=119,setdar=4/3,subtitles=\"${SCC_OUT}\""
 
     PREV_CC="8080"
     while IFS="," read FRAME SECS CC_HEX ; do
