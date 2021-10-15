@@ -14,6 +14,7 @@ To use sccyou, simply download the script from the repo, make it executable (`ch
   ./sccyou INPUT_FILE       create an scc output
   ./sccyou -s  INPUT_FILE   create both scc and srt outputs
   ./sccyou -y  INPUT_FILE   overwrite any existing outputs
+  ./sccyou -o  DIRECTORY    write output files to the provided directory (default is next to the input file)
 ```
 The results of sccyou will vary based upon your specific command, but will look like sidecar `INPUT_FILE.scc` and `INPUT_FILE.srt` files.
 
@@ -61,7 +62,7 @@ Development of sccyou was provided by New York Public Library's 2018/19 Innovati
 
 ## Code of Conduct
 
-You can read our contributor code of conduct [here](https://www.contributor-covenant.org/version/2/0/code_of_conduct/).
+You can read our contributor code of conduct [here](https://www.contributor-covenant.org/version/2/1/code_of_conduct/).
 
 ## License
 
