@@ -195,7 +195,7 @@ while [[ "${@}" != "" ]] ; do
             _write_cc "$CC"
         fi
         PREV_CC="$CC"
-    done < <(ffprobe "${FFPROBE_INPUT_OPTIONS[@]}" -sexagesimal -f lavfi -i movie="${MOVIE},readeia608=lp=1:spw=${SPW}:scan_min=${LINE_MIN}:scan_max=${LINE_MAX}" -show_entries frame=pkt_pts_time:frame_tags=lavfi.readeia608.0.cc -of csv)
+    done < <(ffprobe "${FFPROBE_INPUT_OPTIONS[@]}" -sexagesimal -f lavfi -i movie="${MOVIE},readeia608=lp=1:spw=${SPW}:scan_min=${LINE_MIN}:scan_max=${LINE_MAX}" -show_entries frame=best_effort_timestamp_time:frame_tags=lavfi.readeia608.0.cc -of csv)
     _end_scc
     if [[ "${SRT_OUTPUT}"  == "y" ]] ; then
         ffmpeg "${FFMPEG_INPUT_OPTIONS[@]}" -i "${SCC_OUT}" "${SRT_OUT}"
