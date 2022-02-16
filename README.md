@@ -1,6 +1,19 @@
 # sccyou
 A script that interprets the results of FFmpeg's [readeia608](https://ffmpeg.org/ffmpeg-filters.html#readeia608) filter to create scc (and optionally srt) outputs from standard definition video files which contain [EIA-608](https://en.wikipedia.org/wiki/EIA-608) data.
 
+## Installation
+
+### macOS
+
+If you use macOS, you can easily install sccyou using a package manager called Homebrew. To install Homebrew, follow [these instructions](https://brew.sh/).
+
+To install sccyou, run the following two commands in a [Terminal window](https://en.wikipedia.org/wiki/Terminal_%28macOS%29):
+```
+brew tap amiaopensource/amiaos
+brew install sccyou
+```
+(The first taps the homebrew recipes of the amiaopensource account; the second installs sccyou and the other programs that it requires.)
+
 ## Dependencies
 
 ffmpeg 4.3 or later
@@ -10,11 +23,11 @@ ffmpeg 4.3 or later
 To use sccyou, simply download the script from the repo, make it executable (`chmod 755 sccyou`), and run one of the following commands:
 
 ```
-  ./sccyou -h               display the help menu
-  ./sccyou INPUT_FILE       create an scc output
-  ./sccyou -s  INPUT_FILE   create both scc and srt outputs
-  ./sccyou -y  INPUT_FILE   overwrite any existing outputs
-  ./sccyou -o  DIRECTORY    write output files to the provided directory (default is next to the input file)
+  sccyou -h                         display the help menu
+  sccyou INPUT_FILE                 create an scc output
+  sccyou -s  INPUT_FILE             create both scc and srt outputs
+  sccyou -y  INPUT_FILE             overwrite any existing outputs
+  sccyou -o  DIRECTORY INPUT_FILE   write output files to the provided directory (default is next to the input file)
 ```
 The results of sccyou will vary based upon your specific command, but will look like sidecar `INPUT_FILE.scc` and `INPUT_FILE.srt` files.
 
