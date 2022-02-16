@@ -4,6 +4,8 @@
 # thanks to Paul Mahol, Ben Turkus
 # Copyright (c) 2019, Dave Rice, see License.txt
 
+VERSION="0.1"
+
 SEARCH_FIRST_X_SECONDS_FOR_CAPTION_LINE=20
 
 FFMPEG_INPUT_OPTIONS+=(-hide_banner)
@@ -11,7 +13,7 @@ FFPROBE_INPUT_OPTIONS+=(-hide_banner)
 
 _usage(){
 cat <<EOF
-$(basename "${0}")
+$(basename "${0}") ${VERSION}
 
   Usage
    $(basename "${0}") [OPTIONS] MOVIE_FILE_1.mov [ MOVIE_FILE_2.mov ... ]
