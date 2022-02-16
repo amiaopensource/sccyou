@@ -4,6 +4,8 @@
 # thanks to Paul Mahol, Ben Turkus
 # Copyright (c) 2019, Dave Rice, see License.txt
 
+VERSION="0.1"
+
 SEARCH_FIRST_X_SECONDS_FOR_CAPTION_LINE=20
 
 FFMPEG_INPUT_OPTIONS+=(-hide_banner)
@@ -11,7 +13,7 @@ FFPROBE_INPUT_OPTIONS+=(-hide_banner)
 
 _usage(){
 cat <<EOF
-$(basename "${0}")
+$(basename "${0}") ${VERSION}
 
   Usage
    $(basename "${0}") [OPTIONS] MOVIE_FILE_1.mov [ MOVIE_FILE_2.mov ... ]
@@ -86,23 +88,22 @@ _hhmmssmmm_to_hhmmssff(){
 }
 
 _get_line(){
-    LINE_MIN="$(ffmpeg -i "${MOVIE}" -vf "readeia608=lp=1:spw=${SPW},metadata=mode=print:key=lavfi.readeia608.0.line" -t "${SEARCH_FIRST_X_SECONDS_FOR_CAPTION_LINE}" -f null - 2>&1 | grep -o "lavfi.readeia608.0.line=[0-9]*" | cut -d= -f2 | sort | uniq -c | sort -n -r | head -n 1 | awk '{print $2}')"
-    LINE_MAX="$((LINE_MIN + 1))"
+    LINE_SELECT="$(ffmpeg -i "${MOVIE}" -vf "readeia608=lp=1:spw=${SPW},metadata=mode=print:key=lavfi.readeia608.0.line" -t "${SEARCH_FIRST_X_SECONDS_FOR_CAPTION_LINE}" -f null - 2>&1 | grep -o "lavfi.readeia608.0.line=[0-9]*" | cut -d= -f2 | sort | uniq -c | sort -n -r | head -n 1 | awk '{print $2}')"
 }
 
 _get_caption_settings(){
     # test ratio of width reserved for sync code detection at both 0.3 and 0.27
     SPW="0.30"
     _get_line "${MOVIE}"
-    if [[ -z "${LINE_MIN}" ]] ; then
+    if [[ -z "${LINE_SELECT}" ]] ; then
         SPW="0.27"
         _get_line "${MOVIE}"
     fi
-    if [[ -z "${LINE_MIN}" ]] ; then
+    if [[ -z "${LINE_SELECT}" ]] ; then
         _report -w "Sadly no caption data is detected in the first ${SEARCH_FIRST_X_SECONDS_FOR_CAPTION_LINE} seconds of ${MOVIE}."
         break
     else
-        _report -d "Found captions in ${MOVIE}, using spw=${SPW} and line ${LINE_MIN}."
+        _report -d "Found captions in ${MOVIE}, using spw=${SPW} and line ${LINE_SELECT}."
     fi
 }
 
@@ -180,7 +181,7 @@ while [[ "${@}" != "" ]] ; do
     _report -d "Working on ${MOVIE}, preview with:"
     _report -q "    ffplay \"${MOVIE}\" -vf subtitles=\"${SCC_OUT}\""
     _report -d "Or to zoom in on the captions try:"
-    _report -q "    ffplay \"${MOVIE}\" -vf format=rgb24,crop=iw:1:0:${LINE_MIN},scale=iw:4:flags=neighbor,tile=layout=1x120:overlap=119:init_padding=119,setdar=4/3,subtitles=\"${SCC_OUT}\""
+    _report -q "    ffplay \"${MOVIE}\" -vf format=rgb24,crop=iw:1:0:${LINE_SELECT},scale=iw:4:flags=neighbor,tile=layout=1x120:overlap=119:init_padding=119,setdar=4/3,subtitles=\"${SCC_OUT}\""
 
     PREV_CC="8080"
     while IFS="," read FRAME SECS CC_HEX ; do
@@ -195,7 +196,7 @@ while [[ "${@}" != "" ]] ; do
             _write_cc "$CC"
         fi
         PREV_CC="$CC"
-    done < <(ffprobe "${FFPROBE_INPUT_OPTIONS[@]}" -sexagesimal -f lavfi -i movie="${MOVIE},readeia608=lp=1:spw=${SPW}:scan_min=${LINE_MIN}:scan_max=${LINE_MAX}" -show_entries frame=pkt_pts_time:frame_tags=lavfi.readeia608.0.cc -of csv)
+    done < <(ffprobe "${FFPROBE_INPUT_OPTIONS[@]}" -sexagesimal -f lavfi -i movie="${MOVIE},format=rgb24,crop=iw:1:0:${LINE_SELECT},readeia608=lp=1:spw=${SPW}" -show_entries frame=best_effort_timestamp_time:frame_tags=lavfi.readeia608.0.cc -of csv)
     _end_scc
     if [[ "${SRT_OUTPUT}"  == "y" ]] ; then
         ffmpeg "${FFMPEG_INPUT_OPTIONS[@]}" -i "${SCC_OUT}" "${SRT_OUT}"
