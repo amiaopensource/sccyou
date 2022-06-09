@@ -227,10 +227,7 @@ while [[ "${@}" != "" ]] ; do
     PREV_CC="8080"
     while IFS="," read FRAME SECS CC_HEX ; do
         CC="${CC_HEX:2:4}"
-        if [[ "${CC}" != "8080" ]] && [[ "${PREV_CC}" == "8080" ]] ; then
-            _write_new_cc_line
-            _write_cc "$CC"
-        elif [[ "${CC}" == "9420" ]] && [[ "${PREV_CC}" != "9420" ]] ; then
+        if { [[ "${CC}" != "8080" ]] && [[ "${PREV_CC}" == "8080" ]] ; } || { [[ "${CC}" == "9420" ]] && [[ "${PREV_CC}" != "9420" ]] ; } ; then
             _write_new_cc_line
             _write_cc "$CC"
         elif [[ "${CC}" != "8080" ]] ; then
