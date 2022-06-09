@@ -156,9 +156,7 @@ _write_cc(){
 
 _write_new_cc_line(){
     SCC_TIME="$(_hhmmssmmm_to_hhmmssff "${SECS}")"
-    echo >> "${SCC_OUT}"
-    echo >> "${SCC_OUT}"
-    echo -n "${SCC_TIME}" >> "${SCC_OUT}"
+    echo -e -n "\n\n${SCC_TIME}" >> "${SCC_OUT}"
     START="Y"
 }
 
