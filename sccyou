@@ -139,10 +139,9 @@ _get_caption_settings(){
             _report -w "Sadly no caption data is detected in the first ${SEARCH_FIRST_X_SECONDS_FOR_CAPTION_LINE} seconds of ${MOVIE}."
             _report -w "To increase how many seconds are used to test for captions, use the '-t' option."
             break
-        else
-            _report -d "Found captions in ${MOVIE}, using spw=${SPW} and line ${LINE_SELECT}."
         fi
     fi
+    _report -d "Found captions in ${MOVIE}, using spw=${SPW} and line ${LINE_SELECT}."
 }
 
 _write_cc(){
