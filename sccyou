@@ -226,6 +226,7 @@ while [[ "${@}" != "" ]] ; do
 
     PREV_CC="8080"
     while IFS="," read FRAME SECS CC_HEX ; do
+        if [[ -n "${CC_HEX}" ]] ; then
         CC="${CC_HEX:2:4}"
         if { [[ "${CC}" != "8080" ]] && [[ "${PREV_CC}" == "8080" ]] ; } || { [[ "${CC}" == "9420" ]] && [[ "${PREV_CC}" != "9420" ]] ; } ; then
             _write_new_cc_line
@@ -234,6 +235,7 @@ while [[ "${@}" != "" ]] ; do
             _write_cc "$CC"
         fi
         PREV_CC="$CC"
+        fi
     done < <(ffprobe "${FFPROBE_INPUT_OPTIONS[@]}" -sexagesimal -f lavfi -i movie="${MOVIE},format=rgb24,crop=iw:1:0:${LINE_SELECT},readeia608=lp=1:spw=${SPW}" -show_entries frame=best_effort_timestamp_time:frame_tags=lavfi.readeia608.0.cc -of csv)
     _end_scc
     if [[ "${SRT_OUTPUT}"  == "y" ]] ; then
