@@ -35,8 +35,8 @@ $(basename "${0}") ${VERSION}
    -l <line>    specify the line where caption data should be read,
                 otherwise the first ${SEARCH_FIRST_X_SECONDS_FOR_CAPTION_LINE} lines will be searched.
    -t <secs>    specify an amount of time in seconds for which to search
-                for captions, ${SEARCH_FIRST_X_SECONDS_FOR_CAPTION_LINE} is used by default. This option is
-                disabled if '-l' is used.
+                for captions, ${SEARCH_FIRST_X_SECONDS_FOR_CAPTION_LINE} is used by default. By default the first 20
+                seconds of the video is searched.
 
   Outcome
    will create MOVIE_FILE.scc and MOVIE_FILE.srt
