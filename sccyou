@@ -266,5 +266,5 @@ while [[ "${@}" != "" ]] ; do
         ffmpeg "${FFMPEG_INPUT_OPTIONS[@]}" -i "${SCC_OUT}" "${SRT_OUT}"
     fi
 
-    _report -d "Done with ${MOVIE}."
+    _report -d "Done with ${MOVIE}. We hope you like ${SCC_OUT}."
 done
