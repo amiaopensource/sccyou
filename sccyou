@@ -2,7 +2,7 @@
 # sccyou
 # script to apply the readeia608 filter and interpret the results in order to create an scc (and optionally an srt) output from standard definition video files which contain EIA 608 data
 # thanks to Paul Mahol, Ben Turkus
-# Copyright (c) 2019, Dave Rice, see License.txt
+# Copyright (c) 2019-2022, Dave Rice, see License.txt
 
 VERSION="0.1"
 
