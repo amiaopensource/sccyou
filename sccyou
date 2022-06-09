@@ -8,8 +8,8 @@ VERSION="0.1"
 
 SEARCH_FIRST_X_SECONDS_FOR_CAPTION_LINE=20
 
-FFMPEG_INPUT_OPTIONS+=(-hide_banner)
-FFPROBE_INPUT_OPTIONS+=(-hide_banner)
+FFMPEG_INPUT_OPTIONS+=(-v 0)
+FFPROBE_INPUT_OPTIONS+=(-v 0)
 
 _usage(){
 cat <<EOF
@@ -24,6 +24,8 @@ $(basename "${0}") ${VERSION}
                 to the input file)
    -s           make an srt output as well as scc
    -y           overwrite any existing output files
+   -v           let ffmpeg be verbose, otherwise ffmpeg sdterr is hidden
+
 
   Outcome
    will create MOVIE_FILE.scc and MOVIE_FILE.srt
@@ -133,16 +135,20 @@ _end_scc(){
     echo >> "${SCC_OUT}"
 }
 
-while getopts ":hsyo:" OPT ; do
+while getopts ":hsyo:v" OPT ; do
     case "${OPT}" in
         h) _usage ; exit 0 ;;
         s) SRT_OUTPUT="y" ;;
         y) FFMPEG_INPUT_OPTIONS+=(-y) ; OVERWRITE="sure" ;;
         o) OUTPUT_DIR="${OPTARG}" ;;
+        v) unset FFMPEG_INPUT_OPTIONS ; unset FFPROBE_INPUT_OPTIONS ;;
         *) echo "bad option -${OPTARG}" ; _usage ; exit 1 ;;
     esac
 done
 shift $(( ${OPTIND} - 1 ))
+
+FFMPEG_INPUT_OPTIONS+=(-hide_banner)
+FFPROBE_INPUT_OPTIONS+=(-hide_banner)
 
 if [[ "${@}" == "" ]] ; then
     _usage
