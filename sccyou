@@ -20,8 +20,8 @@ $(basename "${0}") ${VERSION}
 
   Options
    -h           display this help
-   -o <dir>     write output files to the provided directory (default is next
-                to the input file)
+   -o <dir>     write output files to the provided directory (default is
+                next to the input file)
    -s           make an srt output as well as scc
    -y           overwrite any existing output files
    -v           let ffmpeg be verbose, otherwise ffmpeg sdterr is hidden
