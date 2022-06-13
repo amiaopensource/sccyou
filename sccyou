@@ -2,14 +2,14 @@
 # sccyou
 # script to apply the readeia608 filter and interpret the results in order to create an scc (and optionally an srt) output from standard definition video files which contain EIA 608 data
 # thanks to Paul Mahol, Ben Turkus
-# Copyright (c) 2019, Dave Rice, see License.txt
+# Copyright (c) 2019-2022, Dave Rice, see License.txt
 
-VERSION="0.1"
+VERSION="0.2"
 
 SEARCH_FIRST_X_SECONDS_FOR_CAPTION_LINE=20
 
-FFMPEG_INPUT_OPTIONS+=(-hide_banner)
-FFPROBE_INPUT_OPTIONS+=(-hide_banner)
+FFMPEG_INPUT_OPTIONS+=(-v 0)
+FFPROBE_INPUT_OPTIONS+=(-v 0)
 
 _usage(){
 cat <<EOF
@@ -20,10 +20,23 @@ $(basename "${0}") ${VERSION}
 
   Options
    -h           display this help
-   -o <dir>     write output files to the provided directory (default is next
-                to the input file)
+   -o <dir>     write output files to the provided directory (default is
+                next to the input file)
    -s           make an srt output as well as scc
    -y           overwrite any existing output files
+   -v           let ffmpeg be verbose, otherwise ffmpeg sdterr is hidden
+
+  Caption Discovery
+   The location of the captions may either be specified as a line of a
+   specified number of seconds may be searched to find captions. Note
+   that searching for the caption line takes time, so providing the '-l'
+   option to specify the line to use is faster.
+
+   -l <line>    specify the line where caption data should be read,
+                otherwise the first ${SEARCH_FIRST_X_SECONDS_FOR_CAPTION_LINE} lines will be searched.
+   -t <secs>    specify an amount of time in seconds for which to search
+                for captions, ${SEARCH_FIRST_X_SECONDS_FOR_CAPTION_LINE} is used by default. By default the first 20
+                seconds of the video is searched.
 
   Outcome
    will create MOVIE_FILE.scc and MOVIE_FILE.srt
@@ -76,7 +89,7 @@ _report(){
             n) ECHOOPT="-n" ;;                            # to avoid line breaks after echo
         esac
     done
-    shift $(( ${OPTIND} - 1 ))
+    shift $(( OPTIND - 1 ))
     MESSAGE="${1}"
     echo "${ECHOOPT}" "${COLOR}${STARTMESSAGE[@]}${MESSAGE}${NC}"
     [ "${LOG_MESSAGE}" = "Y" ]
@@ -91,20 +104,44 @@ _get_line(){
     LINE_SELECT="$(ffmpeg -i "${MOVIE}" -vf "readeia608=lp=1:spw=${SPW},metadata=mode=print:key=lavfi.readeia608.0.line" -t "${SEARCH_FIRST_X_SECONDS_FOR_CAPTION_LINE}" -f null - 2>&1 | grep -o "lavfi.readeia608.0.line=[0-9]*" | cut -d= -f2 | sort | uniq -c | sort -n -r | head -n 1 | awk '{print $2}')"
 }
 
+_get_cc(){
+    # this function tests for the presence of caption data on the specified line, if the result is non-empty then there are captions read
+    LINE="${1}"
+    SPW=0.27
+    AMOUNT_TO_REPORT=10
+    CC_SELECT="$(ffmpeg -i "${MOVIE}" -vf "format=rgb24,crop=iw:1:0:${LINE},readeia608=spw=${SPW},metadata=mode=print:key=lavfi.readeia608.0.cc" -t "${SEARCH_FIRST_X_SECONDS_FOR_CAPTION_LINE}" -f null - 2>&1 | grep -o "lavfi.readeia608.0.cc=0x[A-F0-9]*" | cut -d= -f2 | head -n "${AMOUNT_TO_REPORT}" | xargs)"
+}
+
 _get_caption_settings(){
     # test ratio of width reserved for sync code detection at both 0.3 and 0.27
     SPW="0.30"
-    _get_line "${MOVIE}"
-    if [[ -z "${LINE_SELECT}" ]] ; then
-        SPW="0.27"
-        _get_line "${MOVIE}"
-    fi
-    if [[ -z "${LINE_SELECT}" ]] ; then
-        _report -w "Sadly no caption data is detected in the first ${SEARCH_FIRST_X_SECONDS_FOR_CAPTION_LINE} seconds of ${MOVIE}."
-        break
+    if [[ -n "${LINE_SELECT_USER}" ]] ; then
+        _get_cc "${LINE_SELECT_USER}"
+        if [[ -z "${CC_SELECT}" ]] ; then
+            SPW="0.27"
+            _get_cc "${LINE_SELECT_USER}"
+        fi
+        if [[ -z "${CC_SELECT}" ]] ; then
+            _report -w "Sadly no caption data is detected in the first ${SEARCH_FIRST_X_SECONDS_FOR_CAPTION_LINE} seconds of ${MOVIE} on line ${LINE_SELECT_USER}."
+            _report -w "To increase how many seconds are used to test for captions, use the '-t' option."
+            _report -w "Or try a different line with the '-l' option, or let sccyou discover which line the captions are on by omitting the '-l' option."
+            break
+        else
+            LINE_SELECT="${LINE_SELECT_USER}"
+        fi
     else
-        _report -d "Found captions in ${MOVIE}, using spw=${SPW} and line ${LINE_SELECT}."
+        _get_line "${MOVIE}"
+        if [[ -z "${LINE_SELECT}" ]] ; then
+            SPW="0.27"
+            _get_line "${MOVIE}"
+        fi
+        if [[ -z "${LINE_SELECT}" ]] ; then
+            _report -w "Sadly no caption data is detected in the first ${SEARCH_FIRST_X_SECONDS_FOR_CAPTION_LINE} seconds of ${MOVIE}."
+            _report -w "To increase how many seconds are used to test for captions, use the '-t' option."
+            break
+        fi
     fi
+    _report -d "Found captions in ${MOVIE}, using spw=${SPW} and line ${LINE_SELECT}."
 }
 
 _write_cc(){
@@ -119,9 +156,7 @@ _write_cc(){
 
 _write_new_cc_line(){
     SCC_TIME="$(_hhmmssmmm_to_hhmmssff "${SECS}")"
-    echo >> "${SCC_OUT}"
-    echo >> "${SCC_OUT}"
-    echo -n "${SCC_TIME}" >> "${SCC_OUT}"
+    echo -e -n "\n\n${SCC_TIME}" >> "${SCC_OUT}"
     START="Y"
 }
 
@@ -133,16 +168,22 @@ _end_scc(){
     echo >> "${SCC_OUT}"
 }
 
-while getopts ":hsyo:" OPT ; do
+while getopts ":hsyo:l:t:v" OPT ; do
     case "${OPT}" in
         h) _usage ; exit 0 ;;
         s) SRT_OUTPUT="y" ;;
         y) FFMPEG_INPUT_OPTIONS+=(-y) ; OVERWRITE="sure" ;;
         o) OUTPUT_DIR="${OPTARG}" ;;
+        l) LINE_SELECT_USER="${OPTARG}" ;;
+        t) SEARCH_FIRST_X_SECONDS_FOR_CAPTION_LINE="${OPTARG}" ;;
+        v) unset FFMPEG_INPUT_OPTIONS ; unset FFPROBE_INPUT_OPTIONS ;;
         *) echo "bad option -${OPTARG}" ; _usage ; exit 1 ;;
     esac
 done
-shift $(( ${OPTIND} - 1 ))
+shift $(( OPTIND - 1 ))
+
+FFMPEG_INPUT_OPTIONS+=(-hide_banner)
+FFPROBE_INPUT_OPTIONS+=(-hide_banner)
 
 if [[ "${@}" == "" ]] ; then
     _usage
@@ -184,23 +225,46 @@ while [[ "${@}" != "" ]] ; do
     _report -q "    ffplay \"${MOVIE}\" -vf format=rgb24,crop=iw:1:0:${LINE_SELECT},scale=iw:4:flags=neighbor,tile=layout=1x120:overlap=119:init_padding=119,setdar=4/3,subtitles=\"${SCC_OUT}\""
 
     PREV_CC="8080"
+    CC_PRESENT=0
     while IFS="," read FRAME SECS CC_HEX ; do
-        CC="${CC_HEX:2:4}"
-        if [[ "${CC}" != "8080" ]] && [[ "${PREV_CC}" == "8080" ]] ; then
-            _write_new_cc_line
-            _write_cc "$CC"
-        elif [[ "${CC}" == "9420" ]] && [[ "${PREV_CC}" != "9420" ]] ; then
-            _write_new_cc_line
-            _write_cc "$CC"
-        elif [[ "${CC}" != "8080" ]] ; then
-            _write_cc "$CC"
+        if [[ -n "${CC_HEX}" ]] ; then
+            CC="${CC_HEX:2:4}"
+            if { [[ "${CC}" != "8080" ]] && [[ "${PREV_CC}" == "8080" ]] ; } || { [[ "${CC}" == "9420" ]] && [[ "${PREV_CC}" != "9420" ]] ; } ; then
+                _write_new_cc_line
+                _write_cc "$CC"
+            elif [[ "${CC}" != "8080" ]] ; then
+                _write_cc "$CC"
+            fi
+            PREV_CC="$CC"
+            if [[ "$CC_PRESENT" == 0 ]] ; then
+                CC_PRESENT=1
+                if [[ -n "${CC_LOG}" ]] ; then
+                    TRANSITION_TIME="$(_hhmmssmmm_to_hhmmssff "${SECS}")"
+                    _report -d "${CC_LOG} - ${TRANSITION_TIME}."
+                fi
+                TRANSITION_TIME="$(_hhmmssmmm_to_hhmmssff "${SECS}")"
+                CC_LOG="Caption data  ON: ${TRANSITION_TIME}"
+            fi
+        else
+            if [[ "$CC_PRESENT" == 1 ]] ; then
+                CC_PRESENT=0
+                if [[ -n "${CC_LOG}" ]] ; then
+                    TRANSITION_TIME="$(_hhmmssmmm_to_hhmmssff "${SECS}")"
+                    _report -d "${CC_LOG} - ${TRANSITION_TIME}."
+                fi
+                TRANSITION_TIME="$(_hhmmssmmm_to_hhmmssff "${SECS}")"
+                CC_LOG="Caption data OFF: ${TRANSITION_TIME}"
+            fi
+            PREV_CC="8080"
         fi
-        PREV_CC="$CC"
+        PREV_SECS="$SECS"
     done < <(ffprobe "${FFPROBE_INPUT_OPTIONS[@]}" -sexagesimal -f lavfi -i movie="${MOVIE},format=rgb24,crop=iw:1:0:${LINE_SELECT},readeia608=lp=1:spw=${SPW}" -show_entries frame=best_effort_timestamp_time:frame_tags=lavfi.readeia608.0.cc -of csv)
+    TRANSITION_TIME="$(_hhmmssmmm_to_hhmmssff "${PREV_SECS}")"
+    _report -d "${CC_LOG} - ${TRANSITION_TIME}."
     _end_scc
     if [[ "${SRT_OUTPUT}"  == "y" ]] ; then
         ffmpeg "${FFMPEG_INPUT_OPTIONS[@]}" -i "${SCC_OUT}" "${SRT_OUT}"
     fi
 
-    _report -d "Done with ${MOVIE}."
+    _report -d "Done with ${MOVIE}. We hope you like ${SCC_OUT}."
 done
