@@ -185,12 +185,12 @@ shift $(( OPTIND - 1 ))
 FFMPEG_INPUT_OPTIONS+=(-hide_banner)
 FFPROBE_INPUT_OPTIONS+=(-hide_banner)
 
-if [[ "${@}" == "" ]] ; then
+if [[ "${*}" == "" ]] ; then
     _usage
     exit
 fi
 
-while [[ "${@}" != "" ]] ; do
+while [[ "${*}" != "" ]] ; do
     MOVIE="${1}"
     if [[ -n "${OUTPUT_DIR}" ]] ; then
         MOVIE_BN="$(basename "${MOVIE}")"
