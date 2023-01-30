@@ -8,6 +8,7 @@ VERSION="0.2"
 
 SEARCH_FIRST_X_SECONDS_FOR_CAPTION_LINE=20
 
+SCRIPTDIR="$(dirname "${0}")"
 FFMPEG_INPUT_OPTIONS+=(-v 0)
 FFPROBE_INPUT_OPTIONS+=(-v 0)
 
@@ -44,6 +45,12 @@ $(basename "${0}") ${VERSION}
   Information about the scc format is available at http://www.theneitherworld.com/mcpoodle/SCC_TOOLS/DOCS/
 
   Dependencies: ffmpeg 4.3 or later
+  
+ -F <path> (provide a custom ffmpeg path. ffprobe is presumed to neighbor ffmpeg)
+
+  If an ffmpeg binary is provided with the '-F <path>' option that will be used,
+  else if an ffmpeg binary exists within the same directory of sccyou, that will
+  be used. Else it will use $(which ffmpeg).
 
   How tos:
 
@@ -101,7 +108,7 @@ _hhmmssmmm_to_hhmmssff(){
 }
 
 _get_line(){
-    LINE_SELECT="$(ffmpeg -i "${MOVIE}" -vf "readeia608=lp=1:spw=${SPW},metadata=mode=print:key=lavfi.readeia608.0.line" -t "${SEARCH_FIRST_X_SECONDS_FOR_CAPTION_LINE}" -f null - 2>&1 | grep -o "lavfi.readeia608.0.line=[0-9]*" | cut -d= -f2 | sort | uniq -c | sort -n -r | head -n 1 | awk '{print $2}')"
+    LINE_SELECT="$("${FFMPEG_PATH}" -i "${MOVIE}" -vf "readeia608=lp=1:spw=${SPW},metadata=mode=print:key=lavfi.readeia608.0.line" -t "${SEARCH_FIRST_X_SECONDS_FOR_CAPTION_LINE}" -f null - 2>&1 | grep -o "lavfi.readeia608.0.line=[0-9]*" | cut -d= -f2 | sort | uniq -c | sort -n -r | head -n 1 | awk '{print $2}')"
 }
 
 _get_cc(){
@@ -109,7 +116,7 @@ _get_cc(){
     LINE="${1}"
     SPW=0.27
     AMOUNT_TO_REPORT=10
-    CC_SELECT="$(ffmpeg -i "${MOVIE}" -vf "format=rgb24,crop=iw:1:0:${LINE},readeia608=spw=${SPW},metadata=mode=print:key=lavfi.readeia608.0.cc" -t "${SEARCH_FIRST_X_SECONDS_FOR_CAPTION_LINE}" -f null - 2>&1 | grep -o "lavfi.readeia608.0.cc=0x[A-F0-9]*" | cut -d= -f2 | head -n "${AMOUNT_TO_REPORT}" | xargs)"
+    CC_SELECT="$("${FFMPEG_PATH}" -i "${MOVIE}" -vf "format=rgb24,crop=iw:1:0:${LINE},readeia608=spw=${SPW},metadata=mode=print:key=lavfi.readeia608.0.cc" -t "${SEARCH_FIRST_X_SECONDS_FOR_CAPTION_LINE}" -f null - 2>&1 | grep -o "lavfi.readeia608.0.cc=0x[A-F0-9]*" | cut -d= -f2 | head -n "${AMOUNT_TO_REPORT}" | xargs)"
 }
 
 _get_caption_settings(){
@@ -168,7 +175,7 @@ _end_scc(){
     echo >> "${SCC_OUT}"
 }
 
-while getopts ":hsyo:l:t:v" OPT ; do
+while getopts ":hsyo:l:t:vF:" OPT ; do
     case "${OPT}" in
         h) _usage ; exit 0 ;;
         s) SRT_OUTPUT="y" ;;
@@ -177,10 +184,27 @@ while getopts ":hsyo:l:t:v" OPT ; do
         l) LINE_SELECT_USER="${OPTARG}" ;;
         t) SEARCH_FIRST_X_SECONDS_FOR_CAPTION_LINE="${OPTARG}" ;;
         v) unset FFMPEG_INPUT_OPTIONS ; unset FFPROBE_INPUT_OPTIONS ;;
+        F) FFMPEG_PATH="${OPTARG}" ;;
         *) echo "bad option -${OPTARG}" ; _usage ; exit 1 ;;
     esac
 done
 shift $(( OPTIND - 1 ))
+
+# if FFMPEG_PATH wasn't provided as an argument then see if one is installed
+if [[ -z "${FFMPEG_PATH}" ]] ; then
+    FFMPEG_GUESS="${SCRIPTDIR}/ffmpeg"
+    if [[ -x "${FFMPEG_GUESS}" ]] ; then
+        FFMPEG_PATH="${FFMPEG_GUESS}"
+    else
+        FFMPEG_PATH="$(which ffmpeg)"
+    fi
+fi
+FFPROBE_GUESS="$(dirname "${FFMPEG_PATH}")/ffprobe"
+if [[ -x "${FFPROBE_GUESS}" ]] ; then
+    FFPROBE_PATH="${FFPROBE_GUESS}"
+else
+    FFPROBE_PATH="$(which ffprobe)"
+fi
 
 FFMPEG_INPUT_OPTIONS+=(-hide_banner)
 FFPROBE_INPUT_OPTIONS+=(-hide_banner)
@@ -258,12 +282,12 @@ while [[ "${*}" != "" ]] ; do
             PREV_CC="8080"
         fi
         PREV_SECS="$SECS"
-    done < <(ffprobe "${FFPROBE_INPUT_OPTIONS[@]}" -sexagesimal -f lavfi -i movie="${MOVIE},format=rgb24,crop=iw:1:0:${LINE_SELECT},readeia608=lp=1:spw=${SPW}" -show_entries frame=best_effort_timestamp_time:frame_tags=lavfi.readeia608.0.cc -of csv)
+    done < <("${FFPROBE_PATH}" "${FFPROBE_INPUT_OPTIONS[@]}" -sexagesimal -f lavfi -i movie="${MOVIE},format=rgb24,crop=iw:1:0:${LINE_SELECT},readeia608=lp=1:spw=${SPW}" -show_entries frame=best_effort_timestamp_time:frame_tags=lavfi.readeia608.0.cc -of csv)
     TRANSITION_TIME="$(_hhmmssmmm_to_hhmmssff "${PREV_SECS}")"
     _report -d "${CC_LOG} - ${TRANSITION_TIME}."
     _end_scc
     if [[ "${SRT_OUTPUT}"  == "y" ]] ; then
-        ffmpeg "${FFMPEG_INPUT_OPTIONS[@]}" -i "${SCC_OUT}" "${SRT_OUT}"
+        "${FFMPEG_PATH}" "${FFMPEG_INPUT_OPTIONS[@]}" -i "${SCC_OUT}" "${SRT_OUT}"
     fi
 
     _report -d "Done with ${MOVIE}. We hope you like ${SCC_OUT}."
