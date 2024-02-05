@@ -20,7 +20,7 @@ ffmpeg 4.3 or later
 
 ## Usage
 
-To use sccyou, simply download the script from the repo, make it executable (`chmod 755 sccyou`), and run one of the following commands:
+To use sccyou, install it and run one of the following commands:
 
 ```
   sccyou -h                         display the help menu
@@ -28,6 +28,7 @@ To use sccyou, simply download the script from the repo, make it executable (`ch
   sccyou -s  INPUT_FILE             create both scc and srt outputs
   sccyou -y  INPUT_FILE             overwrite any existing outputs
   sccyou -o  DIRECTORY INPUT_FILE   write output files to the provided directory (default is next to the input file)
+  sccyou -l X INPUT_FILE            read captions from line X (replace with a number) rather than let sccyou search for the captions
 ```
 The results of sccyou will vary based upon your specific command, but will look like sidecar `INPUT_FILE.scc` and `INPUT_FILE.srt` files.
 
