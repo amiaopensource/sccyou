@@ -4,7 +4,7 @@
 # thanks to Paul Mahol, Ben Turkus
 # Copyright (c) 2019-2024, Dave Rice, see License.txt
 
-VERSION="0.2"
+VERSION="0.3"
 
 SEARCH_FIRST_X_SECONDS_FOR_CAPTION_LINE=20
 
