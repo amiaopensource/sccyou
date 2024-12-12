@@ -226,11 +226,11 @@ while [[ "${*}" != "" ]] ; do
             _report -w "${SCC_OUT} already exists"
             break
         fi
-        if [[ -f "${SRT_OUT}" ]] && [[ "${SRT_OUTPUT}"  == "y" ]] ; then
+        if [[ -f "${SRT_OUT}" ]] && [[ "${SRT_OUTPUT}" == "y" ]] ; then
             _report -w "${SRT_OUT} already exists"
             break
         fi
-        if [[ -f "${VTT_OUT}" ]] && [[ "${VTT_OUTPUT}"  == "y" ]] ; then
+        if [[ -f "${VTT_OUT}" ]] && [[ "${VTT_OUTPUT}" == "y" ]] ; then
             _report -w "${VTT_OUT} already exists"
             break
         fi
