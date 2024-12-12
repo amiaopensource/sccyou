@@ -30,19 +30,28 @@ $(basename "${0}") ${VERSION}
 
   Caption Discovery
    The location of the captions may either be specified as a line or a
-   specified number of seconds may be searched to find captions.
+   specified number of seconds may be searched to find captions. Note
+   that searching for the caption line takes time, so providing the '-l'
+   option to specify the line to use is faster.
 
    -l <line>    specify the line where caption data should be read,
                 otherwise the first ${SEARCH_FIRST_X_SECONDS_FOR_CAPTION_LINE} lines will be searched.
    -t <secs>    specify an amount of time in seconds for which to search
-                for captions, ${SEARCH_FIRST_X_SECONDS_FOR_CAPTION_LINE} is used by default.
+                for captions, ${SEARCH_FIRST_X_SECONDS_FOR_CAPTION_LINE} is used by default. By default the first 20
+                seconds of the video is searched.
 
   Outcome
    will create MOVIE_FILE.scc and optionally MOVIE_FILE.srt or MOVIE_FILE.vtt
 
+  Information about the scc format is available at http://www.theneitherworld.com/mcpoodle/SCC_TOOLS/DOCS/
+
   Dependencies: ffmpeg 4.3 or later
   
  -F <path> (provide a custom ffmpeg path. ffprobe is presumed to neighbor ffmpeg)
+
+  If an ffmpeg binary is provided with the '-F <path>' option that will be used,
+  else if an ffmpeg binary exists within the same directory of sccyou, that will
+  be used. Else it will use $(which ffmpeg).
 
   How tos:
    Playback movie with the scc file:
