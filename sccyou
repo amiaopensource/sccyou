@@ -130,7 +130,7 @@ _get_caption_settings(){
         if [[ -z "${CC_SELECT}" ]] ; then
             _report -w "Sadly no caption data is detected in the first ${SEARCH_FIRST_X_SECONDS_FOR_CAPTION_LINE} seconds of ${MOVIE} on line ${LINE_SELECT_USER}."
             _report -w "Try increasing the search time with '-t' or try another line with '-l'."
-            break
+            return 1
         else
             LINE_SELECT="${LINE_SELECT_USER}"
         fi
@@ -143,10 +143,11 @@ _get_caption_settings(){
         if [[ -z "${LINE_SELECT}" ]] ; then
             _report -w "No caption data detected in the first ${SEARCH_FIRST_X_SECONDS_FOR_CAPTION_LINE} seconds of ${MOVIE}."
             _report -w "Try increasing search time with '-t'."
-            break
+            return 1
         fi
     fi
     _report -d "Found captions in ${MOVIE}, using spw=${SPW} and line ${LINE_SELECT}."
+    return 0
 }
 
 _write_cc(){
@@ -233,19 +234,21 @@ while [[ "${*}" != "" ]] ; do
     if [[ "${OVERWRITE}" != "sure" ]] ; then
         if [[ -f "${SCC_OUT}" ]] ; then
             _report -w "${SCC_OUT} already exists"
-            break
+            continue
         fi
         if [[ -f "${SRT_OUT}" ]] && [[ "${SRT_OUTPUT}" == "y" ]] ; then
             _report -w "${SRT_OUT} already exists"
-            break
+            continue
         fi
         if [[ -f "${VTT_OUT}" ]] && [[ "${VTT_OUTPUT}" == "y" ]] ; then
             _report -w "${VTT_OUT} already exists"
-            break
+            continue
         fi
     fi
 
-    _get_caption_settings "${MOVIE}"
+    if ! _get_caption_settings "${MOVIE}" ; then
+        continue
+    fi
     _start_scc
 
     _report -d "Working on ${MOVIE}, preview with:"
